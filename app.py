@@ -11,6 +11,8 @@ LISTA_ITENS_TXT = "itens.txt"
 LISTA_USUARIOS_TXT = "usuarios.txt"
 RESERVAS_CSV = "reservas.csv"
 EXCLUIDAS_CSV = "reservas_excluidas.csv"
+EXPORT_DIR = "exportacoes"
+os.makedirs(EXPORT_DIR, exist_ok=True)
 
 HTML_TEMPLATE = """
 <!doctype html>
@@ -51,7 +53,9 @@ HTML_TEMPLATE = """
 
 {% with messages = get_flashed_messages() %}
   {% if messages %}
-    <div class=\"msg\">{{ messages[0] }}</div>
+    {% for msg in messages %}
+      <div class=\"msg\">{{ msg }}</div>
+    {% endfor %}
   {% endif %}
 {% endwith %}
 
@@ -64,14 +68,15 @@ HTML_TEMPLATE = """
     {% endfor %}
   </select>
 
+  <label>Exposição:</label>
+  <input type=\"text\" name=\"exposicao\" placeholder=\"Nome da exposição\">
+
   <label>Itens (marque os desejados):</label>
   <div class=\"item-lista\" style=\"columns: 4; column-gap: 16px; max-height: 300px; overflow-y: auto;\">
   {% for i in itens|sort %}
     <label style=\"break-inside: avoid; display: block;\"><input type=\"checkbox\" name=\"itens\" value=\"{{ i }}\"> {{ i }}</label>
   {% endfor %}
 </div>
-</div>
-  </div>
 
   <label>Data início:</label>
   <input type=\"date\" name=\"inicio\" class=\"data-input\">
@@ -85,10 +90,10 @@ HTML_TEMPLATE = """
 <h2>Reservas atuais</h2>
 <div class=\"scrollable-table\">
 <table>
-<tr><th>ID</th><th>Item</th><th>Usuário</th><th>Início</th><th>Fim</th><th>Ações</th></tr>
+<tr><th>ID</th><th>Item</th><th>Usuário</th><th>Exposição</th><th>Início</th><th>Fim</th><th>Ações</th></tr>
 {% for r in reservas %}
 <tr>
-  <td>{{ r[0] }}</td><td>{{ r[1] }}</td><td>{{ r[2] }}</td><td>{{ r[3] }}</td><td>{{ r[4] }}</td>
+  <td>{{ r[0] }}</td><td>{{ r[1] }}</td><td>{{ r[2] }}</td><td>{{ r[5] if r|length > 5 else '' }}</td><td>{{ r[3].split('-')[2] }}/{{ r[3].split('-')[1] }}/{{ r[3].split('-')[0] }}</td><td>{{ r[4].split('-')[2] }}/{{ r[4].split('-')[1] }}/{{ r[4].split('-')[0] }}</td>
   <td><a class=\"btn-excluir\" href=\"/excluir/{{ r[0] }}\">Excluir</a></td>
 </tr>
 {% endfor %}
@@ -112,41 +117,52 @@ HTML_TEMPLATE = """
 </html>
 """
 
-
-
-
-@app.route("/")
-def home():
-    hoje = datetime.today().strftime("%Y-%m-%d")
+@app.route("/exportar_reservas")
+def exportar_reservas():
+    nome_arquivo = os.path.join(EXPORT_DIR, "reservas_exportadas.csv")
     with sqlite3.connect("reservas.db") as conn:
         cur = conn.cursor()
         cur.execute("""
-            SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim
+            SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim, COALESCE(reservas.exposicao, '')
             FROM reservas JOIN itens ON reservas.item_id = itens.id
-            WHERE reservas.fim < ?
-        """, (hoje,))
-        expiradas = cur.fetchall()
-
-        for reserva in expiradas:
-            with open(EXCLUIDAS_CSV, mode="a", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                if os.stat(EXCLUIDAS_CSV).st_size == 0:
-                    writer.writerow(["ID", "Item", "Usuário", "Início", "Fim"])
-                writer.writerow(reserva)
-            cur.execute("DELETE FROM reservas WHERE id = ?", (reserva[0],))
-        conn.commit()
-
-        cur.execute("""
-            SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim
-            FROM reservas JOIN itens ON reservas.item_id = itens.id
-            ORDER BY reservas.inicio ASC
         """)
         reservas = cur.fetchall()
+        with open(nome_arquivo, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["ID", "Item", "Usuário", "Início", "Fim", "Exposição"])
+            for r in reservas:
+                writer.writerow(r)
+    return send_file(nome_arquivo, as_attachment=True)
 
-        cur.execute("SELECT nome FROM itens")
-        itens = [row[0] for row in cur.fetchall()]
-    usuarios = carregar_usuarios()
-    return render_template_string(HTML_TEMPLATE, reservas=reservas, itens=itens, usuarios=usuarios)
+@app.route("/exportar_reservados")
+def exportar_reservados():
+    inicio = request.args.get("inicio")
+    fim = request.args.get("fim")
+    try:
+        datetime.strptime(inicio, "%Y-%m-%d")
+        datetime.strptime(fim, "%Y-%m-%d")
+    except ValueError:
+        flash("Datas inválidas.")
+        return redirect(url_for("home"))
+
+    nome_arquivo = os.path.join(EXPORT_DIR, f"reservados_{inicio}_a_{fim}.csv")
+    with sqlite3.connect("reservas.db") as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim, COALESCE(reservas.exposicao, '')
+            FROM reservas JOIN itens ON reservas.item_id = itens.id
+            WHERE (inicio <= ? AND fim >= ?)
+            ORDER BY inicio ASC
+        """, (fim, inicio))
+        dados = cur.fetchall()
+        with open(nome_arquivo, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["ID", "Item", "Usuário", "Início", "Fim", "Exposição"])
+            for r in dados:
+                writer.writerow(r)
+    return send_file(nome_arquivo, as_attachment=True)
+
+
 
 def carregar_usuarios():
     if os.path.exists(LISTA_USUARIOS_TXT):
@@ -161,8 +177,13 @@ def reservar():
     inicio = request.form.get("inicio")
     fim = request.form.get("fim")
     try:
-        data_inicio = datetime.strptime(inicio, "%Y-%m-%d").strftime("%Y-%m-%d")
-        data_fim = datetime.strptime(fim, "%Y-%m-%d").strftime("%Y-%m-%d")
+        data_inicio_dt = datetime.strptime(inicio, "%Y-%m-%d")
+        data_fim_dt = datetime.strptime(fim, "%Y-%m-%d")
+        if data_inicio_dt > data_fim_dt:
+            flash("A data de início deve ser anterior ou igual à data de fim.")
+            return redirect(url_for("home"))
+        data_inicio = data_inicio_dt.strftime("%Y-%m-%d")
+        data_fim = data_fim_dt.strftime("%Y-%m-%d")
     except ValueError:
         flash("Data inválida. Use o formato correto.")
         return redirect(url_for("home"))
@@ -218,17 +239,82 @@ def excluir(reserva_id):
     return redirect(url_for("home"))
 
 @app.route("/exportar_reservas")
-def exportar_reservas():
-    nome_arquivo = "reservas_exportadas.csv"
+
+@app.route("/")
+def home():
+    hoje = datetime.today().strftime("%Y-%m-%d")
     with sqlite3.connect("reservas.db") as conn:
         cur = conn.cursor()
-        cur.execute("SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim FROM reservas JOIN itens ON reservas.item_id = itens.id")
+
+        # Excluir reservas expiradas
+        cur.execute("""
+            SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim, COALESCE(reservas.exposicao, '')
+            FROM reservas JOIN itens ON reservas.item_id = itens.id
+            WHERE reservas.fim < ?
+        """, (hoje,))
+        expiradas = cur.fetchall()
+
+        for reserva in expiradas:
+            with open(EXCLUIDAS_CSV, mode="a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                if os.stat(EXCLUIDAS_CSV).st_size == 0:
+                    writer.writerow(["ID", "Item", "Usuário", "Início", "Fim", "Exposição"])
+                writer.writerow(reserva)
+            cur.execute("DELETE FROM reservas WHERE id = ?", (reserva[0],))
+        conn.commit()
+
+        # Buscar reservas ativas
+        cur.execute("""
+            SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim, COALESCE(reservas.exposicao, '')
+            FROM reservas JOIN itens ON reservas.item_id = itens.id
+            ORDER BY reservas.inicio ASC
+        """)
         reservas = cur.fetchall()
+
+        cur.execute("SELECT nome FROM itens")
+        itens = [row[0] for row in cur.fetchall()]
+
+    usuarios = carregar_usuarios()
+    return render_template_string(HTML_TEMPLATE, reservas=reservas, itens=itens, usuarios=usuarios)
+
+
+
+@app.route("/exportar_disponiveis")
+def exportar_disponiveis():
+    inicio = request.args.get("inicio")
+    fim = request.args.get("fim")
+    try:
+        datetime.strptime(inicio, "%Y-%m-%d")
+        datetime.strptime(fim, "%Y-%m-%d")
+    except ValueError:
+        flash("Datas inválidas.")
+        return redirect(url_for("home"))
+
+    nome_arquivo = os.path.join(EXPORT_DIR, f"disponiveis_{inicio}_a_{fim}.csv")
+    with sqlite3.connect("reservas.db") as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT nome FROM itens")
+        todos_itens = {row[0] for row in cur.fetchall()}
+
+        cur.execute("""
+            SELECT DISTINCT itens.nome FROM reservas
+            JOIN itens ON reservas.item_id = itens.id
+            WHERE (
+                (? BETWEEN reservas.inicio AND reservas.fim) OR
+                (? BETWEEN reservas.inicio AND reservas.fim) OR
+                (reservas.inicio BETWEEN ? AND ?) OR
+                (reservas.fim BETWEEN ? AND ?)
+            )
+        """, (inicio, fim, inicio, fim, inicio, fim))
+        reservados = {row[0] for row in cur.fetchall()}
+
+        disponiveis = sorted(todos_itens - reservados)
+
         with open(nome_arquivo, mode="w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["ID", "Item", "Usuário", "Início", "Fim"])
-            for r in reservas:
-                writer.writerow(r)
+            writer.writerow(["Itens disponíveis", "Período"])
+            for item in disponiveis:
+                writer.writerow([item, f"{inicio} a {fim}"])
     return send_file(nome_arquivo, as_attachment=True)
 
 def init_db():
