@@ -240,7 +240,7 @@ def excluir(reserva_id):
 
 @app.route("/exportar_reservas")
 
-@app.route("/")
+@app.route("/", methods=["GET", "HEAD"])
 def home():
     hoje = datetime.today().strftime("%Y-%m-%d")
     with sqlite3.connect("reservas.db") as conn:
@@ -276,6 +276,7 @@ def home():
 
     usuarios = carregar_usuarios()
     return render_template_string(HTML_TEMPLATE, reservas=reservas, itens=itens, usuarios=usuarios)
+
 
 
 
