@@ -355,6 +355,8 @@ def init_db():
         conn.commit()
 
 
+init_db()  # Executa em qualquer ambiente, inclusive Render
+
 if __name__ == '__main__':
-    init_db()
     app.run(host='0.0.0.0', port=5000)
+
