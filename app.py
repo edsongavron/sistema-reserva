@@ -320,6 +320,8 @@ def exportar_disponiveis():
 def init_db():
     with sqlite3.connect("reservas.db") as conn:
         c = conn.cursor()
+
+        # Cria tabelas, se necessário
         c.execute("""
             CREATE TABLE IF NOT EXISTS itens (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -336,12 +338,12 @@ def init_db():
                 FOREIGN KEY(item_id) REFERENCES itens(id)
             )
         """)
-        
-        # Adiciona a coluna 'exposicao' se ainda não existir
-        try:
+
+        # Verifica se a coluna 'exposicao' já existe
+        c.execute("PRAGMA table_info(reservas)")
+        colunas = [col[1] for col in c.fetchall()]
+        if "exposicao" not in colunas:
             c.execute("ALTER TABLE reservas ADD COLUMN exposicao TEXT")
-        except sqlite3.OperationalError:
-            pass  # A coluna já existe, ignora o erro
 
         conn.commit()
 
@@ -351,6 +353,7 @@ def init_db():
                 for nome in itens:
                     c.execute("INSERT OR IGNORE INTO itens (nome) VALUES (?)", (nome,))
         conn.commit()
+
 
 if __name__ == '__main__':
     init_db()
