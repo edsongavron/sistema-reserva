@@ -240,6 +240,7 @@ def excluir(reserva_id):
 
 @app.route("/exportar_reservas")
 
+#app.route substituido
 @app.route("/", methods=["GET", "HEAD"])
 def home():
     hoje = datetime.today().strftime("%Y-%m-%d")
@@ -276,8 +277,6 @@ def home():
 
     usuarios = carregar_usuarios()
     return render_template_string(HTML_TEMPLATE, reservas=reservas, itens=itens, usuarios=usuarios)
-
-
 
 
 @app.route("/exportar_disponiveis")
