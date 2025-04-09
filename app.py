@@ -336,6 +336,13 @@ def init_db():
                 FOREIGN KEY(item_id) REFERENCES itens(id)
             )
         """)
+        
+        # Adiciona a coluna 'exposicao' se ainda não existir
+        try:
+            c.execute("ALTER TABLE reservas ADD COLUMN exposicao TEXT")
+        except sqlite3.OperationalError:
+            pass  # A coluna já existe, ignora o erro
+
         conn.commit()
 
         if os.path.exists(LISTA_ITENS_TXT):
