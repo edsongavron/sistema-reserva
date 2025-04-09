@@ -1,0 +1,24 @@
+# Exportações geradas pelo sistema
+/exportacoes/*.csv
+
+# Banco de dados SQLite local
+reservas.db
+
+# Arquivos compilados do Python
+*.pyc
+__pycache__/
+
+# Arquivos temporários ou de backup
+*.tmp
+*.bak
+
+# Configurações do VS Code (se usar)
+.vscode/
+
+# Arquivos do sistema (Windows, macOS)
+.DS_Store
+Thumbs.db
+
+# Arquivos de ambiente e credenciais locais (se existirem)
+.env
+instance/
