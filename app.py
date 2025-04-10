@@ -15,27 +15,42 @@ EXPORT_DIR = "exportacoes"
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
 HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang=\"pt-br\">
 <head>
+    <meta charset=\"utf-8\">
     <title>Sistema de Reservas</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f8f9fa; }
+        h2 { color: #333; text-align: center; }
+        form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 95%; margin: 0 auto 30px auto; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        select.usuario-select { width: 250px; }
+        input.data-input { width: 120px; }
+        input[type=\"text\"], select { padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type=\"submit\"] { margin-top: 15px; background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        input[type=\"submit\"]:hover { background-color: #0056b3; }
+        table { border-collapse: collapse; width: 100%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { padding: 10px; border: 1px solid #dee2e6; text-align: center; }
+        th { background-color: #e9ecef; }
+        .msg { margin: 10px auto; color: green; text-align: center; max-width: 700px; }
+        .btn-excluir { color: red; text-decoration: none; font-weight: bold; }
+        .item-lista label {
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            padding: 6px 8px;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .scrollable-table {
+            max-height: 400px;
+            overflow-y: scroll;
+            display: block;
+        }
+    </style>
 </head>
 <body>
-    <h1>Reservar Itens</h1>
-    <form method="post" action="/reservar">
-        <label for="usuario">Usuário:</label>
-        <select name="usuario" id="usuario">
-            {% for usuario in usuarios %}
-            <option value="{{ usuario }}">{{ usuario }}</option>
-            {% endfor %}
-        </select><br>
 
-<<<<<<< HEAD
-        <label for="itens">Itens:</label><br>
-        {% for item in itens %}
-            <input type="checkbox" name="itens" value="{{ item }}"> {{ item }}<br>
-        {% endfor %}
-=======
 {% with messages = get_flashed_messages() %}
   {% if messages %}
     {% for msg in messages %}
@@ -43,15 +58,16 @@ HTML_TEMPLATE = """
     {% endfor %}
   {% endif %}
 {% endwith %}
->>>>>>> f18e3cd044cfab39c6f2cc0638bdcc74e9089e81
 
-        <label for="inicio">Início:</label>
-        <input type="date" name="inicio" required><br>
+<h2>Fazer nova reserva</h2>
+<form method=\"post\" action=\"/reservar\">  
+  <label>Usuário:</label>
+  <select name=\"usuario\" class=\"usuario-select\">
+    {% for u in usuarios %}
+      <option value=\"{{ u }}\">{{ u }}</option>
+    {% endfor %}
+  </select>
 
-<<<<<<< HEAD
-        <label for="fim">Fim:</label>
-        <input type="date" name="fim" required><br>
-=======
   <label>Exposição:</label>
   <input type=\"text\" name=\"exposicao\" placeholder=\"Nome da exposição\">
 
@@ -61,33 +77,13 @@ HTML_TEMPLATE = """
     <label style=\"break-inside: avoid; display: block;\"><input type=\"checkbox\" name=\"itens\" value=\"{{ i }}\"> {{ i }}</label>
   {% endfor %}
 </div>
->>>>>>> f18e3cd044cfab39c6f2cc0638bdcc74e9089e81
 
-        <label for="exposicao">Exposição:</label>
-        <input type="text" id="exposicao" name="exposicao"><br>
+  <label>Data início:</label>
+  <input type=\"date\" name=\"inicio\" class=\"data-input\">
 
-        <input type="submit" value="Reservar">
-    </form>
+  <label>Data fim:</label>
+  <input type=\"date\" name=\"fim\" class=\"data-input\">
 
-<<<<<<< HEAD
-    <h2>Reservas Atuais</h2>
-    <table border="1">
-        <tr>
-            <th>ID</th><th>Item</th><th>Usuário</th><th>Início</th><th>Fim</th><th>Exposição</th><th>Ações</th>
-        </tr>
-        {% for reserva in reservas %}
-        <tr>
-            <td>{{ reserva[0] }}</td>
-            <td>{{ reserva[1] }}</td>
-            <td>{{ reserva[2] }}</td>
-            <td>{{ reserva[3] }}</td>
-            <td>{{ reserva[4] }}</td>
-            <td>{{ reserva[5] or '' }}</td>
-            <td><a href="/excluir/{{ reserva[0] }}">Excluir</a></td>
-        </tr>
-        {% endfor %}
-    </table>
-=======
   <input type=\"submit\" value=\"Reservar\">
 </form>
 
@@ -116,41 +112,11 @@ HTML_TEMPLATE = """
     <label> até <input type=\"date\" name=\"fim\" required></label>
     <input type=\"submit\" value=\"Exportar reservados\">
 </form>
->>>>>>> f18e3cd044cfab39c6f2cc0638bdcc74e9089e81
 
-    <br>
-    <a href="/exportar_reservas">Exportar Reservas</a>
 </body>
 </html>
 """
 
-<<<<<<< HEAD
-@app.route("/")
-def home():
-    hoje = datetime.today().strftime("%Y-%m-%d")
-    with sqlite3.connect("reservas.db") as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim, reservas.exposicao
-            FROM reservas JOIN itens ON reservas.item_id = itens.id
-            WHERE reservas.fim < ?
-        """, (hoje,))
-        expiradas = cur.fetchall()
-
-        for reserva in expiradas:
-            with open(EXCLUIDAS_CSV, mode="a", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                if os.stat(EXCLUIDAS_CSV).st_size == 0:
-                    writer.writerow(["ID", "Item", "Usuário", "Início", "Fim", "Exposição"])
-                writer.writerow(reserva)
-            cur.execute("DELETE FROM reservas WHERE id = ?", (reserva[0],))
-        conn.commit()
-
-        cur.execute("""
-            SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim, reservas.exposicao
-            FROM reservas JOIN itens ON reservas.item_id = itens.id
-            ORDER BY reservas.inicio ASC
-=======
 @app.route("/exportar_reservas")
 def exportar_reservas():
     nome_arquivo = os.path.join(EXPORT_DIR, "reservas_exportadas.csv")
@@ -159,7 +125,6 @@ def exportar_reservas():
         cur.execute("""
             SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim, COALESCE(reservas.exposicao, '')
             FROM reservas JOIN itens ON reservas.item_id = itens.id
->>>>>>> f18e3cd044cfab39c6f2cc0638bdcc74e9089e81
         """)
         reservas = cur.fetchall()
         with open(nome_arquivo, mode="w", newline="", encoding="utf-8") as f:
@@ -211,8 +176,6 @@ def reservar():
     itens_selecionados = request.form.getlist("itens")
     inicio = request.form.get("inicio")
     fim = request.form.get("fim")
-    exposicao = request.form.get("exposicao")
-
     try:
         data_inicio_dt = datetime.strptime(inicio, "%Y-%m-%d")
         data_fim_dt = datetime.strptime(fim, "%Y-%m-%d")
@@ -245,8 +208,8 @@ def reservar():
                 """, (item_id, data_inicio, data_fim, data_inicio, data_fim, data_inicio, data_fim))
                 conflito = cur.fetchone()[0]
                 if conflito == 0:
-                    cur.execute("INSERT INTO reservas (item_id, usuario, inicio, fim, exposicao) VALUES (?, ?, ?, ?, ?)",
-                                (item_id, usuario, data_inicio, data_fim, exposicao))
+                    cur.execute("INSERT INTO reservas (item_id, usuario, inicio, fim) VALUES (?, ?, ?, ?)",
+                                (item_id, usuario, data_inicio, data_fim))
                     reservas_feitas += 1
                 else:
                     conflitos.append(item_nome)
@@ -262,13 +225,13 @@ def reservar():
 def excluir(reserva_id):
     with sqlite3.connect("reservas.db") as conn:
         cur = conn.cursor()
-        cur.execute("SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim, reservas.exposicao FROM reservas JOIN itens ON reservas.item_id = itens.id WHERE reservas.id = ?", (reserva_id,))
+        cur.execute("SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim FROM reservas JOIN itens ON reservas.item_id = itens.id WHERE reservas.id = ?", (reserva_id,))
         reserva = cur.fetchone()
         if reserva:
             with open(EXCLUIDAS_CSV, mode="a", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
                 if os.stat(EXCLUIDAS_CSV).st_size == 0:
-                    writer.writerow(["ID", "Item", "Usuário", "Início", "Fim", "Exposição"])
+                    writer.writerow(["ID", "Item", "Usuário", "Início", "Fim"])
                 writer.writerow(reserva)
             cur.execute("DELETE FROM reservas WHERE id = ?", (reserva_id,))
             conn.commit()
@@ -277,15 +240,11 @@ def excluir(reserva_id):
 
 @app.route("/exportar_reservas")
 
-#app.route substituido
-@app.route("/", methods=["GET", "HEAD"])
+@app.route("/")
 def home():
     hoje = datetime.today().strftime("%Y-%m-%d")
     with sqlite3.connect("reservas.db") as conn:
         cur = conn.cursor()
-<<<<<<< HEAD
-        cur.execute("SELECT reservas.id, itens.nome, reservas.usuario, reservas.inicio, reservas.fim, reservas.exposicao FROM reservas JOIN itens ON reservas.item_id = itens.id")
-=======
 
         # Excluir reservas expiradas
         cur.execute("""
@@ -310,7 +269,6 @@ def home():
             FROM reservas JOIN itens ON reservas.item_id = itens.id
             ORDER BY reservas.inicio ASC
         """)
->>>>>>> f18e3cd044cfab39c6f2cc0638bdcc74e9089e81
         reservas = cur.fetchall()
 
         cur.execute("SELECT nome FROM itens")
@@ -318,6 +276,7 @@ def home():
 
     usuarios = carregar_usuarios()
     return render_template_string(HTML_TEMPLATE, reservas=reservas, itens=itens, usuarios=usuarios)
+
 
 
 @app.route("/exportar_disponiveis")
@@ -353,22 +312,14 @@ def exportar_disponiveis():
 
         with open(nome_arquivo, mode="w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-<<<<<<< HEAD
-            writer.writerow(["ID", "Item", "Usuário", "Início", "Fim", "Exposição"])
-            for r in reservas:
-                writer.writerow(r)
-=======
             writer.writerow(["Itens disponíveis", "Período"])
             for item in disponiveis:
                 writer.writerow([item, f"{inicio} a {fim}"])
->>>>>>> f18e3cd044cfab39c6f2cc0638bdcc74e9089e81
     return send_file(nome_arquivo, as_attachment=True)
 
 def init_db():
     with sqlite3.connect("reservas.db") as conn:
         c = conn.cursor()
-
-        # Cria tabelas, se necessário
         c.execute("""
             CREATE TABLE IF NOT EXISTS itens (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -382,17 +333,9 @@ def init_db():
                 usuario TEXT NOT NULL,
                 inicio TEXT NOT NULL,
                 fim TEXT NOT NULL,
-                exposicao TEXT,
                 FOREIGN KEY(item_id) REFERENCES itens(id)
             )
         """)
-
-        # Verifica se a coluna 'exposicao' já existe
-        c.execute("PRAGMA table_info(reservas)")
-        colunas = [col[1] for col in c.fetchall()]
-        if "exposicao" not in colunas:
-            c.execute("ALTER TABLE reservas ADD COLUMN exposicao TEXT")
-
         conn.commit()
 
         if os.path.exists(LISTA_ITENS_TXT):
@@ -402,9 +345,6 @@ def init_db():
                     c.execute("INSERT OR IGNORE INTO itens (nome) VALUES (?)", (nome,))
         conn.commit()
 
-
-init_db()  # Executa em qualquer ambiente, inclusive Render
-
 if __name__ == '__main__':
+    init_db()
     app.run(host='0.0.0.0', port=5000)
-
