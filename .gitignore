@@ -1,6 +1,10 @@
 # Exportações geradas pelo sistema
 /exportacoes/*.csv
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 91e39df (Inclui reservas.db no repositório para deploy)
 # Arquivos compilados do Python
 *.pyc
 __pycache__/
