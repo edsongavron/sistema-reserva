@@ -1,9 +1,6 @@
 # Exportações geradas pelo sistema
 /exportacoes/*.csv
 
-# Banco de dados SQLite local
-#reservas.db
-
 # Arquivos compilados do Python
 *.pyc
 __pycache__/
