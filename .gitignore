@@ -2,7 +2,7 @@
 /exportacoes/*.csv
 
 # Banco de dados SQLite local
-reservas.db
+#reservas.db
 
 # Arquivos compilados do Python
 *.pyc
