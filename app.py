@@ -22,6 +22,15 @@ HTML_TEMPLATE = """
 </head>
 <body>
     <h1>Reservar Itens</h1>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="msg">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
     <form method="post" action="/reservar">
         <label for="usuario">Usuário:</label>
         <select name="usuario" id="usuario">
@@ -30,50 +39,33 @@ HTML_TEMPLATE = """
             {% endfor %}
         </select><br>
 
-<<<<<<< HEAD
-        <label for="itens">Itens:</label><br>
-        {% for item in itens %}
-            <input type="checkbox" name="itens" value="{{ item }}"> {{ item }}<br>
-        {% endfor %}
-=======
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    {% for msg in messages %}
-      <div class=\"msg\">{{ msg }}</div>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
->>>>>>> f18e3cd044cfab39c6f2cc0638bdcc74e9089e81
-
         <label for="inicio">Início:</label>
         <input type="date" name="inicio" required><br>
 
-<<<<<<< HEAD
         <label for="fim">Fim:</label>
         <input type="date" name="fim" required><br>
-=======
-  <label>Exposição:</label>
-  <input type=\"text\" name=\"exposicao\" placeholder=\"Nome da exposição\">
-
-  <label>Itens (marque os desejados):</label>
-  <div class=\"item-lista\" style=\"columns: 4; column-gap: 16px; max-height: 300px; overflow-y: auto;\">
-  {% for i in itens|sort %}
-    <label style=\"break-inside: avoid; display: block;\"><input type=\"checkbox\" name=\"itens\" value=\"{{ i }}\"> {{ i }}</label>
-  {% endfor %}
-</div>
->>>>>>> f18e3cd044cfab39c6f2cc0638bdcc74e9089e81
 
         <label for="exposicao">Exposição:</label>
         <input type="text" id="exposicao" name="exposicao"><br>
 
+        <label>Itens:</label><br>
+        {% for item in itens %}
+            <input type="checkbox" name="itens" value="{{ item }}"> {{ item }}<br>
+        {% endfor %}
+
         <input type="submit" value="Reservar">
     </form>
 
-<<<<<<< HEAD
     <h2>Reservas Atuais</h2>
     <table border="1">
         <tr>
-            <th>ID</th><th>Item</th><th>Usuário</th><th>Início</th><th>Fim</th><th>Exposição</th><th>Ações</th>
+            <th>ID</th>
+            <th>Item</th>
+            <th>Usuário</th>
+            <th>Início</th>
+            <th>Fim</th>
+            <th>Exposição</th>
+            <th>Ações</th>
         </tr>
         {% for reserva in reservas %}
         <tr>
@@ -87,36 +79,6 @@ HTML_TEMPLATE = """
         </tr>
         {% endfor %}
     </table>
-=======
-  <input type=\"submit\" value=\"Reservar\">
-</form>
-
-<h2>Reservas atuais</h2>
-<div class=\"scrollable-table\">
-<table>
-<tr><th>ID</th><th>Item</th><th>Usuário</th><th>Exposição</th><th>Início</th><th>Fim</th><th>Ações</th></tr>
-{% for r in reservas %}
-<tr>
-  <td>{{ r[0] }}</td><td>{{ r[1] }}</td><td>{{ r[2] }}</td><td>{{ r[5] if r|length > 5 else '' }}</td><td>{{ r[3].split('-')[2] }}/{{ r[3].split('-')[1] }}/{{ r[3].split('-')[0] }}</td><td>{{ r[4].split('-')[2] }}/{{ r[4].split('-')[1] }}/{{ r[4].split('-')[0] }}</td>
-  <td><a class=\"btn-excluir\" href=\"/excluir/{{ r[0] }}\">Excluir</a></td>
-</tr>
-{% endfor %}
-</table>
-</div>
-
-<h2>Exportações</h2>
-<form method=\"get\" action=\"/exportar_disponiveis\" style=\"margin-bottom: 20px;\">
-    <label>Exportar itens <strong>disponíveis</strong> de: <input type=\"date\" name=\"inicio\" required></label>
-    <label> até <input type=\"date\" name=\"fim\" required></label>
-    <input type=\"submit\" value=\"Exportar disponíveis\">
-</form>
-
-<form method=\"get\" action=\"/exportar_reservados\">
-    <label>Exportar itens <strong>reservados</strong> de: <input type=\"date\" name=\"inicio\" required></label>
-    <label> até <input type=\"date\" name=\"fim\" required></label>
-    <input type=\"submit\" value=\"Exportar reservados\">
-</form>
->>>>>>> f18e3cd044cfab39c6f2cc0638bdcc74e9089e81
 
     <br>
     <a href="/exportar_reservas">Exportar Reservas</a>
